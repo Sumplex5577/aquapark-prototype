@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a3d91">
+<title>Аквапарк Одеса — прототип</title>
+<style>
+  :root{
+    --brand:#0a3d91;        /* глубокий синий бренда */
+    --brand-2:#1564d6;      /* светлее */
+    --aqua:#19c3d6;         /* бирюза воды */
+    --aqua-2:#36e0c4;       /* мятный */
+    --sun:#ffb020;          /* солнечный акцент */
+    --coral:#ff5d6c;        /* коралл/горки */
+    --ink:#0f2138;          /* текст */
+    --muted:#6b7c93;        /* серый текст */
+    --line:#e8eef6;         /* линии */
+    --bg:#f4f7fc;           /* фон */
+    --card:#ffffff;
+    --ok:#1ea672;
+    --radius:22px;
+    --shadow:0 14px 40px -16px rgba(13,48,109,.35);
+    --shadow-sm:0 6px 18px -10px rgba(13,48,109,.4);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",system-ui,sans-serif;
+    background:#0b1f3a;
+    color:var(--ink);
+    display:flex;align-items:center;justify-content:center;min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* Телефонная рамка (на десктопе). На мобиле — во весь экран */
+  .phone{
+    position:relative;width:390px;height:844px;background:var(--bg);
+    border-radius:46px;overflow:hidden;box-shadow:0 40px 120px -30px rgba(0,0,0,.7),0 0 0 12px #0c1b30,0 0 0 13px #1d2c44;
+  }
+  @media (max-width:440px){
+    body{background:var(--bg);}
+    .phone{width:100vw;height:100vh;height:100dvh;border-radius:0;box-shadow:none;}
+  }
+
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg);
+    animation:fade .35s ease both;overflow:hidden;}
+  .screen.active{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .scroll::-webkit-scrollbar{display:none;}
+
+  /* статус-бар имитация */
+  .statusbar{height:env(safe-area-inset-top,0);min-height:8px;}
+  .topnote{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-weight:700;font-size:15px;color:#fff;z-index:5;pointer-events:none;}
+  .topnote.dark{color:var(--ink);}
+  .topnote .dots{display:flex;gap:6px;align-items:center;opacity:.95;font-size:13px;}
+
+  /* ---------- ОБЩИЕ КОМПОНЕНТЫ ---------- */
+  .btn{appearance:none;border:0;border-radius:16px;padding:17px 20px;font-size:16.5px;font-weight:700;
+    width:100%;cursor:pointer;transition:transform .12s ease,box-shadow .2s,filter .2s;font-family:inherit;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;box-shadow:var(--shadow-sm);}
+  .btn-aqua{background:linear-gradient(135deg,var(--aqua),var(--aqua-2));color:#063e46;box-shadow:0 8px 22px -10px rgba(25,195,214,.7);}
+  .btn-dark{background:#0f2138;color:#fff;}
+  .btn-light{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.5);}
+
+  .h1{font-size:26px;font-weight:800;letter-spacing:-.4px;margin:0;}
+  .sub{color:var(--muted);font-size:14.5px;line-height:1.5;margin:6px 0 0;}
+  .label{font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);}
+
+  /* ---------- HEADER (повторно используемый) ---------- */
+  .appbar{display:flex;align-items:center;gap:12px;padding:14px 18px 10px;}
+  .appbar .iconbtn{width:42px;height:42px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow-sm);font-size:19px;border:0;cursor:pointer;color:var(--ink);}
+  .appbar h2{font-size:18px;font-weight:800;margin:0;flex:1;}
+
+  /* =====================================================
+     ЭКРАН: SPLASH / ГЛАВНАЯ
+  ===================================================== */
+  .hero{position:relative;height:440px;flex:0 0 auto;overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 20% 0%, #43d4ff 0%, transparent 55%),
+      radial-gradient(120% 100% at 90% 10%, #1564d6 0%, transparent 60%),
+      linear-gradient(160deg,#1aa6e8,#0a3d91 75%);}
+  /* стилизованные «горки» */
+  .slide{position:absolute;border-radius:60px;filter:saturate(1.1);}
+  .s1{width:120px;height:330px;right:-10px;top:40px;background:linear-gradient(180deg,#ff8a3d,#ff5d6c);transform:rotate(12deg);box-shadow:inset -16px 0 26px rgba(0,0,0,.18);}
+  .s2{width:96px;height:360px;right:78px;top:10px;background:linear-gradient(180deg,#5ce06a,#19b36b);transform:rotate(-8deg);box-shadow:inset -14px 0 22px rgba(0,0,0,.18);}
+  .s3{width:80px;height:300px;right:150px;top:80px;background:linear-gradient(180deg,#ffd23f,#ff9e1b);transform:rotate(16deg);box-shadow:inset -12px 0 20px rgba(0,0,0,.16);}
+  /* реальное фото поверх градиента; если не загрузится — onerror скрывает его и остаётся градиент+горки */
+  .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;}
+  .hero.has-photo .slide,.auth-hero.has-photo .slide{display:none;}   /* при наличии фото прячем рисованные горки */
+  .hero.has-photo .hero-fade{background:linear-gradient(180deg,rgba(8,30,70,.12) 0%,transparent 30%,rgba(8,30,70,.55) 78%,var(--bg) 100%);z-index:2;}
+  .hero-fade{position:absolute;inset:0;z-index:2;background:linear-gradient(180deg,transparent 40%,rgba(8,30,70,.2) 70%,var(--bg) 100%);}
+  .hero-content{position:absolute;left:22px;right:22px;bottom:78px;color:#fff;z-index:3;}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.25);padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;}
+  .hero-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:14px 0 2px;text-shadow:0 4px 18px rgba(0,0,0,.25);}
+  .hero-sub{font-size:14.5px;opacity:.92;margin:0;}
+
+  .home-body{padding:18px 18px 110px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:-46px;position:relative;z-index:4;}
+  .promo{border-radius:20px;padding:18px 16px;color:#fff;min-height:128px;display:flex;flex-direction:column;justify-content:space-between;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:pointer;transition:transform .12s;}
+  .promo:active{transform:scale(.97);}
+  .promo .emoji{font-size:26px;}
+  .promo h3{margin:0;font-size:18px;font-weight:800;}
+  .promo p{margin:2px 0 0;font-size:12.5px;opacity:.9;}
+  .promo.tickets{background:linear-gradient(150deg,#1f8bff,#0a3d91);}
+  .promo.abon{background:linear-gradient(150deg,#19c3d6,#0a8aa0);}
+  .promo .glow{position:absolute;width:120px;height:120px;border-radius:50%;right:-30px;bottom:-40px;background:rgba(255,255,255,.18);}
+
+  .section-h{display:flex;align-items:center;justify-content:space-between;margin:26px 4px 12px;}
+  .section-h h3{margin:0;font-size:18px;font-weight:800;}
+  .section-h a{color:var(--brand-2);font-size:13.5px;font-weight:700;text-decoration:none;}
+
+  .info-row{display:flex;gap:12px;align-items:center;padding:15px 16px;}
+  .info-ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;}
+  .info-row .t{flex:1;}
+  .info-row .t b{display:block;font-size:15px;}
+  .info-row .t span{font-size:13px;color:var(--muted);}
+  .divider{height:1px;background:var(--line);margin:0 16px;}
+
+  .weather{display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;color:#fff;
+    background:linear-gradient(135deg,#2aa9 e8,#1564d6);background:linear-gradient(135deg,#27b0ef,#1564d6);box-shadow:var(--shadow-sm);}
+  .weather .temp{font-size:34px;font-weight:800;line-height:1;}
+  .weather .wt{flex:1;}
+  .weather .wt b{font-size:15px;display:block;}
+  .weather .wt span{font-size:12.5px;opacity:.9;}
+
+  /* галерея */
+  .gallery{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x mandatory;}
+  .gallery::-webkit-scrollbar{display:none;}
+  .gallery .g{flex:0 0 auto;width:230px;height:150px;border-radius:20px;overflow:hidden;scroll-snap-align:start;
+    box-shadow:var(--shadow-sm);position:relative;background:linear-gradient(135deg,#1aa6e8,#0a3d91);}
+  .gallery .g img{width:100%;height:100%;object-fit:cover;display:block;}
+  .gallery .g .ph-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;}
+
+  /* ---------- BOTTOM NAV ---------- */
+  .tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:flex-start;padding-top:11px;z-index:20;}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);font-weight:600;cursor:pointer;
+    background:none;border:0;font-family:inherit;width:64px;}
+  .tab svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.9;}
+  .tab.active{color:var(--brand-2);}
+  .tab.active svg{stroke:var(--brand-2);}
+  .tab.qr-tab{position:relative;top:-14px;}
+  .tab.qr-tab .qbtn{width:58px;height:58px;border-radius:20px;background:linear-gradient(135deg,var(--aqua),var(--brand-2));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px -8px rgba(21,100,214,.7);}
+  .tab.qr-tab .qbtn svg{stroke:#fff;width:27px;height:27px;}
+
+  /* =====================================================
+     ЭКРАН: ВХОД
+  ===================================================== */
+  .auth-hero{height:300px;flex:0 0 auto;position:relative;overflow:hidden;
+    background:radial-gradient(120% 90% at 80% 10%,#22c1dd,transparent 55%),linear-gradient(160deg,#1690e0,#0a3d91);}
+  .auth-hero .slide{opacity:.95;}
+  .auth-card{flex:1;background:var(--bg);margin-top:-40px;border-radius:34px 34px 0 0;position:relative;z-index:2;
+    padding:30px 24px 24px;display:flex;flex-direction:column;}
+  .field{margin-top:18px;}
+  .field label{font-size:13px;font-weight:700;color:var(--muted);margin-left:4px;}
+  .input{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:16px;
+    padding:15px 16px;margin-top:8px;transition:border .2s;}
+  .input:focus-within{border-color:var(--brand-2);}
+  .input .flag{font-size:20px;}
+  .input input{border:0;outline:0;font-size:17px;flex:1;font-family:inherit;background:transparent;color:var(--ink);font-weight:600;}
+  .input .pref{font-weight:700;color:var(--ink);font-size:17px;}
+
+  /* OTP */
+  .otp{display:flex;gap:10px;justify-content:center;margin-top:22px;}
+  .otp .d{width:48px;height:58px;border-radius:14px;background:#fff;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:800;color:var(--brand);}
+  .otp .d.fill{border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(21,100,214,.12);}
+  .resend{text-align:center;color:var(--muted);font-size:13.5px;margin-top:18px;}
+  .resend b{color:var(--brand-2);}
+
+  /* =====================================================
+     ЭКРАН: КАТАЛОГ (билеты / абонемент)
+  ===================================================== */
+  .catalog{padding:6px 18px 130px;}
+  .datepick{display:flex;gap:9px;overflow-x:auto;padding:6px 2px 14px;}
+  .datepick::-webkit-scrollbar{display:none;}
+  .day{flex:0 0 auto;width:58px;height:74px;border-radius:18px;background:#fff;border:1.5px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:.15s;}
+  .day span{font-size:12px;color:var(--muted);font-weight:600;}
+  .day b{font-size:20px;font-weight:800;}
+  .day.sel{background:linear-gradient(135deg,var(--brand-2),var(--brand));border-color:transparent;color:#fff;box-shadow:var(--shadow-sm);}
+  .day.sel span{color:rgba(255,255,255,.85);}
+
+  .ticket{padding:18px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;}
+  .ticket .tIc{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;flex:0 0 auto;}
+  .ticket .tBody{flex:1;}
+  .ticket .tBody b{font-size:16px;}
+  .ticket .tBody .p{color:var(--muted);font-size:13px;margin-top:2px;}
+  .ticket .tBody .price{font-size:17px;font-weight:800;color:var(--brand);margin-top:6px;}
+  .ticket .tBody .price s{font-weight:600;color:var(--muted);font-size:13px;margin-right:6px;}
+  .stepper{display:flex;align-items:center;gap:12px;}
+  .stepper button{width:34px;height:34px;border-radius:11px;border:0;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+  .stepper .minus{background:#eef3fa;color:var(--brand);}
+  .stepper .plus{background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;}
+  .stepper .qty{font-size:18px;font-weight:800;min-width:18px;text-align:center;}
+
+  .banner-note{background:linear-gradient(135deg,#fff6e6,#fff);border:1px solid #ffe2ad;border-radius:18px;padding:14px 16px;
+    display:flex;gap:10px;font-size:13px;color:#8a5a00;line-height:1.45;margin-bottom:14px;}
+
+  /* нижняя «корзина» бар */
+  .checkout-bar{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:14px 18px calc(16px + env(safe-area-inset-bottom,0));z-index:30;box-shadow:0 -10px 30px -18px rgba(13,48,109,.4);}
+  .checkout-bar .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .checkout-bar .row .lbl{font-size:13px;color:var(--muted);}
+  .checkout-bar .row .sum{font-size:24px;font-weight:800;}
+
+  /* =====================================================
+     ЭКРАН: ОПЛАТА
+  ===================================================== */
+  .pay-body{padding:8px 18px 24px;}
+  .order{padding:16px;margin-bottom:18px;}
+  .order .oRow{display:flex;justify-content:space-between;padding:9px 0;font-size:14.5px;}
+  .order .oRow.tot{border-top:1px dashed var(--line);margin-top:6px;padding-top:14px;font-weight:800;font-size:18px;}
+  .order .oRow .m{color:var(--muted);}
+  .paylist{display:flex;flex-direction:column;gap:12px;}
+  .paymethod{display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;background:#fff;border:1.5px solid var(--line);cursor:pointer;transition:.15s;}
+  .paymethod.sel{border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(21,100,214,.1);}
+  .paymethod .pm-ic{width:46px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:0 0 auto;}
+  .paymethod .pm-t{flex:1;font-weight:700;font-size:15px;}
+  .paymethod .pm-t span{display:block;font-size:12px;color:var(--muted);font-weight:500;}
+  .radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;display:flex;align-items:center;justify-content:center;}
+  .paymethod.sel .radio{border-color:var(--brand-2);}
+  .paymethod.sel .radio::after{content:"";width:11px;height:11px;border-radius:50%;background:var(--brand-2);}
+  .apple-ic{background:#000;color:#fff;}
+  .google-ic{background:#fff;border:1px solid var(--line);color:#000;font-size:11px;}
+  .card-ic{background:linear-gradient(135deg,#1564d6,#0a3d91);color:#fff;}
+
+  /* =====================================================
+     ЭКРАН: УСПЕХ + БИЛЕТ (QR)
+  ===================================================== */
+  .success{align-items:center;justify-content:flex-start;background:
+    radial-gradient(120% 60% at 50% 0%, #1aa6e8 0%, transparent 60%),var(--bg);}
+  .checkwrap{margin-top:84px;width:108px;height:108px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 18px 40px -14px rgba(30,166,114,.5);animation:pop .5s cubic-bezier(.2,1.3,.5,1) both;}
+  @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .checkwrap svg{width:56px;height:56px;stroke:var(--ok);stroke-width:3.5;fill:none;}
+
+  .ticketcard{margin:26px 18px 0;background:#fff;border-radius:26px;box-shadow:var(--shadow);overflow:hidden;width:calc(100% - 36px);}
+  .tc-top{background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;padding:20px 22px;}
+  .tc-top .lbl{font-size:12px;opacity:.85;letter-spacing:.5px;text-transform:uppercase;}
+  .tc-top h3{margin:4px 0 0;font-size:21px;font-weight:800;}
+  .tc-top .meta{font-size:13px;opacity:.9;margin-top:4px;}
+  .tc-perf{position:relative;height:0;}
+  .tc-perf::before,.tc-perf::after{content:"";position:absolute;top:-13px;width:26px;height:26px;border-radius:50%;background:var(--bg);}
+  .tc-perf::before{left:-13px;}
+  .tc-perf::after{right:-13px;}
+  .tc-qr{padding:26px 22px 14px;display:flex;flex-direction:column;align-items:center;}
+  .qrbox{width:200px;height:200px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;}
+  .qrbox svg{width:184px;height:184px;}
+  .tc-code{margin-top:14px;font-size:15px;letter-spacing:3px;font-weight:800;color:var(--ink);}
+  .tc-hint{color:var(--muted);font-size:12.5px;margin-top:4px;text-align:center;line-height:1.5;padding:0 10px;}
+
+  /* =====================================================
+     ЭКРАН: МОИ БИЛЕТЫ / ПРОФИЛЬ
+  ===================================================== */
+  .list-body{padding:6px 18px 110px;}
+  .mt-card{padding:16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;cursor:pointer;}
+  .mt-card .mIc{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto;color:#fff;}
+  .mt-card .mB{flex:1;}
+  .mt-card .mB b{font-size:15.5px;}
+  .mt-card .mB span{display:block;font-size:13px;color:var(--muted);margin-top:2px;}
+  .badge{font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;}
+  .badge.active{background:#e3f7ee;color:var(--ok);}
+  .badge.used{background:#f0f0f4;color:var(--muted);}
+
+  .profile-head{background:linear-gradient(160deg,#1690e0,#0a3d91);padding:34px 22px 26px;color:#fff;border-radius:0 0 28px 28px;}
+  .avatar{width:64px;height:64px;border-radius:20px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;}
+  .menu-list{padding:18px;}
+  .menu-item{display:flex;align-items:center;gap:14px;padding:16px;background:#fff;border-radius:16px;margin-bottom:10px;box-shadow:var(--shadow-sm);cursor:pointer;}
+  .menu-item .mi-ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;}
+  .menu-item .mi-t{flex:1;font-weight:600;font-size:15px;}
+  .menu-item .chev{color:var(--muted);font-size:20px;}
+
+  /* экран бонусов — карта штампов */
+  .stampcard{background:linear-gradient(135deg,#1564d6,#0a3d91);color:#fff;border-radius:24px;padding:22px;box-shadow:var(--shadow);}
+  .sc-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .sc-top b{font-size:17px;font-weight:800;}
+  .sc-top .cnt{font-size:14px;opacity:.92;font-weight:700;}
+  .stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin:18px 0 4px;}
+  .stamp{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;
+    background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.32);}
+  .stamp.done{background:#fff;color:var(--brand);border-color:#fff;}
+  .stamp.gift{background:var(--sun);border-color:var(--sun);color:#3a2400;font-size:22px;}
+  .sc-progress{font-size:13.5px;opacity:.96;margin-top:14px;text-align:center;line-height:1.45;}
+  .refer{margin-top:16px;background:linear-gradient(135deg,#1564d6,#0a3d91);color:#fff;border-radius:22px;padding:20px;}
+  .refer-h{font-size:18px;font-weight:800;}
+  .refer-p{font-size:13.5px;opacity:.92;margin:6px 0 14px;line-height:1.45;}
+  .refer-code{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.15);border:1px dashed rgba(255,255,255,.55);border-radius:14px;padding:10px 12px;}
+  .refer-code span{flex:1;font-weight:800;letter-spacing:1px;font-size:16px;}
+  .refer-code button{background:#fff;color:var(--brand);border:0;border-radius:10px;padding:9px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;}
+  .hist{display:flex;align-items:center;padding:13px 0;}
+  .hist .ht{flex:1;}
+  .hist .ht b{font-size:14.5px;}
+  .hist .ht span{display:block;font-size:12.5px;color:var(--muted);}
+  .hist .hp{font-weight:800;font-size:15px;}
+  .hist .hp.plus{color:var(--ok);}
+  .hist .hp.minus{color:var(--coral);}
+
+  /* экран карты */
+  .mapwrap{position:relative;background:#dfe7f1;}
+  .gmap{width:100%;height:320px;border:0;display:block;}
+  .map-info .info-row{padding:12px 0;}
+  .map-info .info-row .t b{font-size:14.5px;}
+  .map-info .info-row .t span{font-size:13.5px;}
+
+  /* utility */
+  .pad{padding:0 18px;}
+  .mt8{margin-top:8px;}.mt12{margin-top:12px;}.mt16{margin-top:16px;}.mt24{margin-top:24px;}
+  .center{text-align:center;}
+  .hidden{display:none!important;}
+  .backbtn{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);
+    border:0;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+
+  /* плавающая подсказка "это прототип" */
+  .protohint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(10,30,60,.85);color:#fff;
+    font-size:12px;padding:8px 14px;border-radius:999px;z-index:999;backdrop-filter:blur(6px);pointer-events:none;}
+  @media (max-width:440px){.protohint{display:none;}}
+
+  /* переключатель языка */
+  .langtoggle{position:absolute;top:52px;right:14px;z-index:60;display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.22);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.35);
+    color:#fff;border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:800;cursor:pointer;
+    box-shadow:0 6px 16px -8px rgba(0,0,0,.5);font-family:inherit;}
+  .langtoggle.onlight{background:rgba(15,33,56,.06);border-color:var(--line);color:var(--brand);}
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ============ ГЛАВНАЯ ============ -->
+  <section class="screen active" id="home">
+    <div class="topnote"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="scroll">
+      <div class="hero" id="homeHero">
+        <img class="hero-photo" src="photos/hero.jpg" alt="" onload="heroOK('homeHero')" onerror="this.style.display='none'">
+        <div class="slide s2"></div>
+        <div class="slide s1"></div>
+        <div class="slide s3"></div>
+        <div class="hero-fade"></div>
+        <div class="hero-content">
+          <span class="chip">📍 Одеса · сьогодні відкрито 10:00–18:00</span>
+          <h1 class="hero-title">Аквапарк «Одеса»</h1>
+          <p class="hero-sub">Найвищі та найексклюзивніші гірки на півдні України 🌊</p>
+        </div>
+      </div>
+
+      <div class="home-body">
+        <div class="grid2">
+          <div class="promo tickets" onclick="go('tickets')">
+            <span class="glow"></span>
+            <span class="emoji">🎟️</span>
+            <div><h3>Купити білет</h3><p>на сьогодні чи дату</p></div>
+          </div>
+          <div class="promo abon" onclick="go('abon')">
+            <span class="glow"></span>
+            <span class="emoji">🏖️</span>
+            <div><h3>Абонемент</h3><p>Літо 2026 · вигідно</p></div>
+          </div>
+        </div>
+
+        <div class="weather mt24" data-noi18n onclick="fetchWeather()">
+          <div class="temp" id="wTemp">21°</div>
+          <div class="wt"><b id="wDesc">Завантаження…</b><span id="wMeta">Одеса · оновлюється…</span></div>
+          <div style="font-size:30px" id="wIcon">⛅</div>
+        </div>
+
+        <div class="section-h"><h3>Галерея</h3><a onclick="alert('Прототип: повна галерея')">всі фото</a></div>
+        <div class="gallery">
+          <div class="g"><span class="ph-fallback">🛝</span><img src="photos/g1.jpg" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>
+          <div class="g"><span class="ph-fallback">🌊</span><img src="photos/g2.jpg" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>
+          <div class="g"><span class="ph-fallback">🏊</span><img src="photos/g3.jpg" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>
+          <div class="g"><span class="ph-fallback">☀️</span><img src="photos/g4.jpg" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>
+        </div>
+
+        <div class="section-h"><h3>Швидко</h3></div>
+        <div class="card">
+          <div class="info-row" onclick="go('myqr')">
+            <div class="info-ic" style="background:#e7f0ff;color:#1564d6">📲</div>
+            <div class="t"><b>Мій QR-код</b><span>показати на турнікеті</span></div>
+            <div style="color:var(--muted);font-size:20px">›</div>
+          </div>
+          <div class="divider"></div>
+          <div class="info-row" onclick="go('mytickets')">
+            <div class="info-ic" style="background:#e3f7ee;color:#1ea672">🎫</div>
+            <div class="t"><b>Мої квитки та абонементи</b><span>1 активний</span></div>
+            <div style="color:var(--muted);font-size:20px">›</div>
+          </div>
+          <div class="divider"></div>
+          <div class="info-row" onclick="go('bonus')">
+            <div class="info-ic" style="background:#fff7e6;color:#ff9e1b">🎁</div>
+            <div class="t"><b>Моя картка</b><span>4 з 9 до безкоштовного квитка</span></div>
+            <div style="color:var(--muted);font-size:20px">›</div>
+          </div>
+          <div class="divider"></div>
+          <div class="info-row" onclick="go('map')">
+            <div class="info-ic" style="background:#fdeef0;color:#ff5d6c">📍</div>
+            <div class="t"><b>Як нас знайти</b><span>смт Авангард · 7 км</span></div>
+            <div style="color:var(--muted);font-size:20px">›</div>
+          </div>
+        </div>
+
+        <div class="section-h"><h3>Спеціальні пропозиції</h3></div>
+        <div class="card" style="overflow:hidden">
+          <div style="background:linear-gradient(135deg,#ff8a3d,#ff5d6c);color:#fff;padding:20px 18px;">
+            <b style="font-size:18px">Іменинникам — безкоштовно 🎂</b>
+            <p style="margin:6px 0 0;font-size:13.5px;opacity:.95">Іменинникам до 18 років — вхід вільний з документом. Дітям до 3 років — безкоштовно. Онлайн-квиток дешевший на 50 грн.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar" id="tabbar-home"></div>
+  </section>
+
+  <!-- ============ ВХІД (телефон) ============ -->
+  <section class="screen" id="login">
+    <div class="topnote"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="auth-hero" id="authHero">
+      <img class="hero-photo" src="photos/login.jpg" alt="" onload="heroOK('authHero')" onerror="this.src='photos/hero.jpg';this.onerror=function(){this.style.display='none'}">
+      <div class="slide s2"></div><div class="slide s1"></div><div class="slide s3"></div>
+      <div style="position:absolute;inset:0;z-index:2;background:linear-gradient(180deg,rgba(8,30,70,.25),transparent 40%)"></div>
+      <button class="backbtn" style="position:absolute;top:54px;left:18px;z-index:5" onclick="go('home')">‹</button>
+    </div>
+    <div class="auth-card">
+      <h1 class="h1">Вхід та реєстрація</h1>
+      <p class="sub">Введіть номер телефону — надішлемо код у SMS. Пароль не потрібен.</p>
+
+      <div class="field">
+        <label>Номер телефону</label>
+        <div class="input">
+          <span class="flag">🇺🇦</span>
+          <span class="pref">+380</span>
+          <input id="phoneInput" type="tel" inputmode="numeric" placeholder="50 333 70 90" maxlength="12">
+        </div>
+      </div>
+
+      <div style="flex:1"></div>
+      <p class="sub center" style="font-size:12px">Натискаючи «Отримати код», ви приймаєте умови та політику конфіденційності.</p>
+      <button class="btn btn-primary" onclick="go('otp')">Отримати код</button>
+    </div>
+  </section>
+
+  <!-- ============ OTP ============ -->
+  <section class="screen" id="otp">
+    <div class="topnote"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="auth-hero" style="height:240px">
+      <div class="slide s2"></div><div class="slide s1"></div><div class="slide s3"></div>
+      <button class="backbtn" style="position:absolute;top:54px;left:18px;z-index:5" onclick="go('login')">‹</button>
+    </div>
+    <div class="auth-card">
+      <h1 class="h1">Введіть код</h1>
+      <p class="sub">Ми надіслали 4-значний код на <b>+380 50 333 70 90</b></p>
+      <div class="otp" id="otpRow">
+        <div class="d fill">3</div><div class="d fill">9</div><div class="d fill">1</div><div class="d">_</div>
+      </div>
+      <p class="resend">Не отримали код? <b>Надіслати ще раз (0:24)</b></p>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" onclick="go('home')">Підтвердити</button>
+    </div>
+  </section>
+
+  <!-- ============ КАТАЛОГ: БІЛЕТИ ============ -->
+  <section class="screen" id="tickets">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('home')">‹</button>
+      <h2>Квитки</h2>
+    </div>
+    <div class="scroll">
+      <div class="catalog">
+        <p class="label" style="margin:2px 4px 0">Оберіть дату відвідування</p>
+        <div class="datepick" id="datepick">
+          <div class="day"><span>ВТ</span><b>9</b></div>
+          <div class="day sel"><span>СР</span><b>10</b></div>
+          <div class="day"><span>ЧТ</span><b>11</b></div>
+          <div class="day"><span>ПТ</span><b>12</b></div>
+          <div class="day"><span>СБ</span><b>13</b></div>
+          <div class="day"><span>НД</span><b>14</b></div>
+        </div>
+
+        <div class="banner-note">
+          <span>🎂</span><span>Дітям до 3 років — безкоштовно. Іменинникам до 18 — вхід вільний (з документом).</span>
+        </div>
+
+        <div class="card ticket">
+          <div class="tIc" style="background:#e7f0ff">🧑</div>
+          <div class="tBody">
+            <b>Дорослий</b>
+            <div class="p">повний день · вище 140 см</div>
+            <div class="price"><s>1600 ₴</s>900 ₴</div>
+          </div>
+          <div class="stepper" data-price="900">
+            <button class="minus" onclick="step(this,-1)">−</button>
+            <span class="qty">1</span>
+            <button class="plus" onclick="step(this,1)">+</button>
+          </div>
+        </div>
+
+        <div class="card ticket">
+          <div class="tIc" style="background:#e3f7ee">🧒</div>
+          <div class="tBody">
+            <b>Дитячий</b>
+            <div class="p">до 140 см</div>
+            <div class="price"><s>1200 ₴</s>700 ₴</div>
+          </div>
+          <div class="stepper" data-price="700">
+            <button class="minus" onclick="step(this,-1)">−</button>
+            <span class="qty">0</span>
+            <button class="plus" onclick="step(this,1)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="checkout-bar">
+      <div class="row"><span class="lbl">Разом · <span id="ticketCount">1</span> квиток</span><span class="sum" id="ticketSum">900 ₴</span></div>
+      <button class="btn btn-primary" onclick="go('pay')">Перейти до оплати</button>
+    </div>
+  </section>
+
+  <!-- ============ КАТАЛОГ: АБОНЕМЕНТ ============ -->
+  <section class="screen" id="abon">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('home')">‹</button>
+      <h2>Абонементи</h2>
+    </div>
+    <div class="scroll">
+      <div class="catalog">
+        <div class="card" style="overflow:hidden;margin-bottom:16px">
+          <div style="background:linear-gradient(150deg,#19c3d6,#0a8aa0);color:#fff;padding:22px 20px">
+            <span class="chip" style="background:rgba(255,255,255,.2)">🏖️ Весь сезон</span>
+            <h2 style="margin:14px 0 2px;font-size:23px;font-weight:800">Абонемент «Літо 2026»</h2>
+            <p style="margin:0;font-size:13.5px;opacity:.95">Багаторазове відвідування весь сезон</p>
+          </div>
+          <div style="padding:18px 20px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font-size:30px;font-weight:800;color:var(--brand)">6 000 ₴</span>
+              <span class="badge active" style="margin-left:auto">весь сезон</span>
+            </div>
+            <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">Діє 01.06.2026 – 31.08.2026 · необмежена кількість відвідувань</p>
+            <ul style="margin:14px 0 0;padding-left:18px;color:var(--ink);font-size:14px;line-height:1.9">
+              <li>Один платіж — і все літо ваше</li>
+              <li>Обмін QR на браслет у касі або автоматичній касі</li>
+              <li>Прив'язка відбитку на турнікеті при першому відвідуванні</li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="label" style="margin:0 4px 10px">Кількість абонементів</p>
+        <div class="card ticket">
+          <div class="tIc" style="background:#e7faf6">🏖️</div>
+          <div class="tBody">
+            <b>Літо 2026 (online)</b>
+            <div class="p">на одну особу</div>
+            <div class="price">6 000 ₴</div>
+          </div>
+          <div class="stepper" data-price="6000">
+            <button class="minus" onclick="step(this,-1)">−</button>
+            <span class="qty">1</span>
+            <button class="plus" onclick="step(this,1)">+</button>
+          </div>
+        </div>
+        <div class="banner-note" style="margin-top:14px">
+          <span>⚠️</span><span>Під кожним QR буде ім'я власника. При обміні на браслети не переплутайте — прив'яжіть СВІЙ відбиток до свого абонемента.</span>
+        </div>
+      </div>
+    </div>
+    <div class="checkout-bar">
+      <div class="row"><span class="lbl">Разом · <span id="abonCount">1</span> абонемент</span><span class="sum" id="abonSum">6 000 ₴</span></div>
+      <button class="btn btn-aqua" onclick="go('pay')">Перейти до оплати</button>
+    </div>
+  </section>
+
+  <!-- ============ ОПЛАТА ============ -->
+  <section class="screen" id="pay">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="back()">‹</button>
+      <h2>Оплата</h2>
+    </div>
+    <div class="scroll">
+      <div class="pay-body">
+        <div class="card order">
+          <div class="oRow"><span class="m">Дорослий × 1</span><span>900 ₴</span></div>
+          <div class="oRow"><span class="m">Сервісний збір</span><span>0 ₴</span></div>
+          <div class="oRow tot"><span>До сплати</span><span>900 ₴</span></div>
+        </div>
+
+        <p class="label" style="margin:0 4px 12px">Спосіб оплати</p>
+        <div class="paylist">
+          <div class="paymethod sel" onclick="pickPay(this)">
+            <div class="pm-ic apple-ic"> Pay</div>
+            <div class="pm-t">Apple&nbsp;Pay<span>оплата в один дотик</span></div>
+            <div class="radio"></div>
+          </div>
+          <div class="paymethod" onclick="pickPay(this)">
+            <div class="pm-ic google-ic">G&nbsp;Pay</div>
+            <div class="pm-t">Google&nbsp;Pay<span>оплата в один дотик</span></div>
+            <div class="radio"></div>
+          </div>
+          <div class="paymethod" onclick="pickPay(this)">
+            <div class="pm-ic card-ic">💳</div>
+            <div class="pm-t">Банківська картка<span>Visa / Mastercard · Apple/Google/будь-яка</span></div>
+            <div class="radio"></div>
+          </div>
+        </div>
+
+        <p class="sub center" style="font-size:12px;margin-top:18px">🔒 Оплата захищена. Кошти проходять через українського провайдера (Fondy / WayForPay / LiqPay).</p>
+      </div>
+    </div>
+    <div class="checkout-bar">
+      <button class="btn btn-dark" id="payBtn" data-noi18n onclick="go('success')"> Pay · Сплатити 900 ₴</button>
+    </div>
+  </section>
+
+  <!-- ============ УСПІХ + QR ============ -->
+  <section class="screen success" id="success">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="checkwrap"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h1 class="h1 mt16">Оплата успішна 🎉</h1>
+    <p class="sub center pad">Квиток уже у вас. Покажіть QR-код на турнікеті або обміняйте на браслет у касі.</p>
+
+    <div class="ticketcard">
+      <div class="tc-top">
+        <div class="lbl">Квиток · Аквапарк Одеса</div>
+        <h3>Дорослий + Дитячий</h3>
+        <div class="meta">Середа, 10 червня 2026 · повний день</div>
+      </div>
+      <div class="tc-perf"></div>
+      <div class="tc-qr">
+        <div class="qrbox" id="qrSuccess"></div>
+        <div class="tc-code">AQ-2026-0 39 17</div>
+        <p class="tc-hint">При першому відвідуванні зареєструйте відбиток у касі або на вхідному турнікеті.</p>
+      </div>
+    </div>
+    <div style="padding:20px 18px;width:100%">
+      <button class="btn btn-primary" onclick="go('mytickets')">Мої квитки</button>
+      <button class="btn btn-light mt12" onclick="go('home')">На головну</button>
+    </div>
+  </section>
+
+  <!-- ============ МІЙ QR (для турнікета) ============ -->
+  <section class="screen" id="myqr" style="background:linear-gradient(160deg,#1690e0,#0a3d91)">
+    <div class="topnote"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('home')" style="background:rgba(255,255,255,.2);color:#fff">‹</button>
+      <h2 style="color:#fff">Мій QR-код</h2>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px 60px">
+      <div style="background:#fff;border-radius:30px;padding:30px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);text-align:center">
+        <div style="font-weight:800;font-size:18px;margin-bottom:4px">Абонемент «Літо 2026»</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:20px">Олександр · діє до 31.08.2026</div>
+        <div class="qrbox" id="qrMy" style="width:230px;height:230px;margin:0 auto"></div>
+        <div class="tc-code" style="margin-top:18px">AQ-2026-0 39 17</div>
+      </div>
+      <p style="color:rgba(255,255,255,.9);font-size:13.5px;text-align:center;margin-top:22px;line-height:1.6">
+        Піднесіть екран до сканера турнікета<br>або до автоматичної каси для обміну на браслет
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ МОЇ КВИТКИ ============ -->
+  <section class="screen" id="mytickets">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('home')">‹</button>
+      <h2>Мої квитки</h2>
+    </div>
+    <div class="scroll">
+      <div class="list-body">
+        <div class="card mt-card" onclick="go('myqr')">
+          <div class="mIc" style="background:linear-gradient(135deg,#19c3d6,#0a8aa0)">🏖️</div>
+          <div class="mB"><b>Абонемент «Літо 2026»</b><span>діє до 31.08.2026 · Олександр</span></div>
+          <span class="badge active">Активний</span>
+        </div>
+        <div class="card mt-card" onclick="go('success')">
+          <div class="mIc" style="background:linear-gradient(135deg,#1f8bff,#0a3d91)">🎫</div>
+          <div class="mB"><b>Дорослий + Дитячий</b><span>10.06.2026 · повний день</span></div>
+          <span class="badge active">Активний</span>
+        </div>
+        <div class="card mt-card" style="opacity:.7">
+          <div class="mIc" style="background:#b9c4d4">🎫</div>
+          <div class="mB"><b>Дорослий × 2</b><span>02.06.2026 · використано</span></div>
+          <span class="badge used">Минув</span>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar" id="tabbar-tickets"></div>
+  </section>
+
+  <!-- ============ БОНУСИ ============ -->
+  <section class="screen" id="bonus">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('profile')">‹</button>
+      <h2>Картка відвідувань</h2>
+    </div>
+    <div class="scroll">
+      <div style="padding:6px 18px 28px">
+        <div class="stampcard">
+          <div class="sc-top">
+            <b>Збери 9 — 10-те безкоштовно</b>
+            <span class="cnt" data-noi18n>4 / 9</span>
+          </div>
+          <div class="stamps">
+            <div class="stamp done" data-noi18n>✓</div>
+            <div class="stamp done" data-noi18n>✓</div>
+            <div class="stamp done" data-noi18n>✓</div>
+            <div class="stamp done" data-noi18n>✓</div>
+            <div class="stamp"></div>
+            <div class="stamp"></div>
+            <div class="stamp"></div>
+            <div class="stamp"></div>
+            <div class="stamp"></div>
+            <div class="stamp gift" data-noi18n>🎁</div>
+          </div>
+          <div class="sc-progress">Ще 5 покупок — і 10-те відвідування безкоштовне 🎉</div>
+        </div>
+
+        <p class="label" style="margin:22px 4px 10px">Як це працює</p>
+        <div class="card" style="padding:4px 16px">
+          <div class="info-row"><div class="info-ic" style="background:#e7f0ff;color:#1564d6">🎟️</div><div class="t"><b>1 покупка в застосунку = 1 штамп</b><span>квиток, шафка чи їжа</span></div></div>
+          <div class="divider" style="margin:0"></div>
+          <div class="info-row"><div class="info-ic" style="background:#e3f7ee;color:#1ea672">🎁</div><div class="t"><b>Кожне 10-те відвідування — безкоштовне</b><span>збери 9 штампів</span></div></div>
+          <div class="divider" style="margin:0"></div>
+          <div class="info-row"><div class="info-ic" style="background:#fff3e0">🎂</div><div class="t"><b>Безкоштовний вхід у день народження</b><span>автоматично, раз на рік</span></div></div>
+        </div>
+
+        <div class="refer">
+          <div class="refer-h">👫 Приведи друга</div>
+          <p class="refer-p">Друг купує за твоїм кодом — ти отримуєш +1 штамп, а друг −10% на перший квиток.</p>
+          <div class="refer-code"><span data-noi18n>AQUA-OLEK</span><button onclick="alert('Прототип: посилання скопійовано ✅')">Поділитися</button></div>
+        </div>
+
+        <p class="label" style="margin:22px 4px 10px">Історія</p>
+        <div class="card" style="padding:4px 16px">
+          <div class="hist"><div class="ht"><b>Купівля квитка</b><span>10.06.2026</span></div><div class="hp plus">+1 штамп</div></div>
+          <div class="divider" style="margin:0"></div>
+          <div class="hist"><div class="ht"><b>Бонус за друга</b><span>02.06.2026</span></div><div class="hp plus">+1 штамп</div></div>
+          <div class="divider" style="margin:0"></div>
+          <div class="hist"><div class="ht"><b>Оплата в застосунку</b><span>28.05.2026</span></div><div class="hp plus">+1 штамп</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ КАРТА ПРОЇЗДУ ============ -->
+  <section class="screen" id="map">
+    <div class="topnote dark"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="appbar" style="padding-top:46px">
+      <button class="iconbtn" onclick="go('home')">‹</button>
+      <h2>Як нас знайти</h2>
+    </div>
+    <div class="scroll">
+      <div class="mapwrap">
+        <iframe class="gmap" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.openstreetmap.org/export/embed.html?bbox=30.6089%2C46.4372%2C30.6329%2C46.4512&amp;layer=mapnik&amp;marker=46.444217%2C30.620913"></iframe>
+      </div>
+      <div style="padding:18px 18px 28px">
+        <div class="card map-info" style="padding:6px 16px">
+          <div class="info-row">
+            <div class="info-ic" style="background:#e7f0ff;color:#1564d6">📍</div>
+            <div class="t"><b>Адреса</b><span>смт Авангард, вул. Ангарська, 70 (7 км)</span></div>
+          </div>
+          <div class="divider" style="margin:0"></div>
+          <div class="info-row">
+            <div class="info-ic" style="background:#e3f7ee;color:#1ea672">🕒</div>
+            <div class="t"><b>Графік роботи</b><span>Щодня 10:00–18:00</span></div>
+          </div>
+          <div class="divider" style="margin:0"></div>
+          <div class="info-row">
+            <div class="info-ic" style="background:#fff3e0">📞</div>
+            <div class="t"><b>Телефон</b><span>+38 048 737 80 08</span></div>
+          </div>
+        </div>
+        <a class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:16px"
+          href="https://www.google.com/maps/dir/?api=1&amp;destination=46.444217,30.620913" target="_blank" rel="noopener">🧭 Прокласти маршрут (Google Maps)</a>
+        <a class="btn btn-light" style="display:block;text-align:center;text-decoration:none;margin-top:12px"
+          href="tel:+380487378008">📞 Подзвонити</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ПРОФІЛЬ ============ -->
+  <section class="screen" id="profile">
+    <div class="topnote"><span>9:41</span><span class="dots">📶 🔋</span></div>
+    <div class="scroll">
+      <div class="profile-head" style="padding-top:54px">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div class="avatar">О</div>
+          <div>
+            <div style="font-size:20px;font-weight:800">Олександр</div>
+            <div style="opacity:.9;font-size:14px">+380 50 333 70 90</div>
+          </div>
+        </div>
+      </div>
+      <div class="menu-list">
+        <div class="menu-item" onclick="go('mytickets')"><div class="mi-ic" style="background:#e7f0ff">🎫</div><div class="mi-t">Мої квитки та абонементи</div><span class="chev">›</span></div>
+        <div class="menu-item" onclick="go('bonus')"><div class="mi-ic" style="background:#fff7e6">🎁</div><div class="mi-t">Моя картка</div><span class="chev">›</span></div>
+        <div class="menu-item" onclick="alert('Прототип: історія оплат')"><div class="mi-ic" style="background:#e3f7ee">⭐</div><div class="mi-t">Мої оплати</div><span class="chev">›</span></div>
+        <div class="menu-item" onclick="alert('Прототип: промокод')"><div class="mi-ic" style="background:#fff3e0">🎟️</div><div class="mi-t">Промокод</div><span class="chev">›</span></div>
+        <div class="menu-item" onclick="go('map')"><div class="mi-ic" style="background:#eef0ff">📍</div><div class="mi-t">Як нас знайти</div><span class="chev">›</span></div>
+        <div class="menu-item" onclick="alert('Прототип: підтримка')"><div class="mi-ic" style="background:#e8f7fb">💬</div><div class="mi-t">Допомога та зв'язок</div><span class="chev">›</span></div>
+      </div>
+    </div>
+    <div class="tabbar" id="tabbar-profile"></div>
+  </section>
+
+  <!-- переключатель языка (поверх всех экранов) -->
+  <button class="langtoggle" data-noi18n onclick="toggleLang()">🌐 <span id="langLabel">EN</span></button>
+
+</div>
+
+<div class="protohint">👆 Це кликабельний прототип — натискайте кнопки</div>
+
+<script>
+  // ---- если фото загрузилось, прячем рисованные горки ----
+  function heroOK(id){ document.getElementById(id)?.classList.add('has-photo'); }
+
+  // ---- стек навигации ----
+  const stack = ['home'];
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el = document.getElementById(id);
+    el.classList.add('active');
+    el.querySelector('.scroll')?.scrollTo(0,0);
+    if(stack[stack.length-1]!==id) stack.push(id);
+    renderQR();
+  }
+  function back(){
+    stack.pop();
+    const prev = stack[stack.length-1] || 'home';
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(prev).classList.add('active');
+  }
+
+  // ---- степпер количества ----
+  function step(btn,dir){
+    const wrap = btn.parentElement;
+    const qtyEl = wrap.querySelector('.qty');
+    let q = Math.max(0, parseInt(qtyEl.textContent)+dir);
+    qtyEl.textContent = q;
+    recalc();
+  }
+  function recalc(){
+    // билеты
+    let tc=0, ts=0;
+    document.querySelectorAll('#tickets .stepper').forEach(s=>{
+      const q=parseInt(s.querySelector('.qty').textContent);
+      tc+=q; ts+=q*parseInt(s.dataset.price);
+    });
+    const tcEl=document.getElementById('ticketCount'), tsEl=document.getElementById('ticketSum');
+    if(tcEl){tcEl.textContent=tc; tsEl.textContent=ts.toLocaleString('uk-UA')+' ₴';}
+    // абонементы
+    let ac=0, as=0;
+    document.querySelectorAll('#abon .stepper').forEach(s=>{
+      const q=parseInt(s.querySelector('.qty').textContent);
+      ac+=q; as+=q*parseInt(s.dataset.price);
+    });
+    const acEl=document.getElementById('abonCount');
+    if(acEl){acEl.textContent=ac; document.getElementById('abonSum').textContent=as.toLocaleString('uk-UA')+' ₴';}
+  }
+
+  // ---- выбор даты ----
+  document.getElementById('datepick').addEventListener('click',e=>{
+    const d=e.target.closest('.day'); if(!d)return;
+    document.querySelectorAll('#datepick .day').forEach(x=>x.classList.remove('sel'));
+    d.classList.add('sel');
+  });
+
+  // ---- выбор способа оплаты ----
+  let payMethod='apple';
+  function pickPay(el){
+    document.querySelectorAll('#pay .paymethod').forEach(p=>p.classList.remove('sel'));
+    el.classList.add('sel');
+    const t=el.querySelector('.pm-t').firstChild.textContent.trim();
+    payMethod = t.includes('Apple')?'apple':t.includes('Google')?'google':'card';
+    updatePayBtn();
+  }
+  function updatePayBtn(){
+    const b=document.getElementById('payBtn'); if(!b)return;
+    const amt='900 ₴';
+    if(payMethod==='apple')      b.textContent=' Pay '+amt;
+    else if(payMethod==='google')b.textContent='G Pay '+amt;
+    else                         b.textContent=(currentLang==='en'?'Pay ':'Сплатити ')+amt;
+  }
+
+  // ========= ПЕРЕКЛЮЧЕНИЕ ЯЗЫКА UA / EN =========
+  let currentLang='uk';
+  const DICT = {
+    // —— главная ——
+    "📍 Одеса · сьогодні відкрито 10:00–18:00":"📍 Odesa · open today 10:00–18:00",
+    "Аквапарк «Одеса»":"Aquapark “Odesa”",
+    "Найвищі та найексклюзивніші гірки на півдні України 🌊":"The tallest, most exclusive slides in southern Ukraine 🌊",
+    "Купити білет":"Buy a ticket",
+    "на сьогодні чи дату":"for today or a date",
+    "Абонемент":"Season pass",
+    "Літо 2026 · вигідно":"Summer 2026 · best price",
+    "Хмарно, комфортно":"Cloudy, comfortable",
+    "Вода в басейнах +26° · вітер 3 м/с":"Pool water +26° · wind 3 m/s",
+    "Галерея":"Gallery",
+    "всі фото":"all photos",
+    "Швидко":"Quick actions",
+    "Мій QR-код":"My QR code",
+    "показати на турнікеті":"show at the turnstile",
+    "Мої квитки та абонементи":"My tickets & passes",
+    "1 активний":"1 active",
+    "Як нас знайти":"Find us",
+    "Одеса · маршрут":"Odesa · directions",
+    "Спеціальні пропозиції":"Special offers",
+    "Іменинникам — безкоштовно 🎂":"Birthday guests — free 🎂",
+    "Іменинникам до 18 років — вхід вільний з документом. Дітям до 3 років — безкоштовно. Онлайн-квиток дешевший на 50 грн.":"Birthday guests under 18 — free entry with ID. Kids under 3 — free. Online ticket is 50 ₴ cheaper.",
+    // —— вход / otp ——
+    "Вхід та реєстрація":"Sign in & register",
+    "Введіть номер телефону — надішлемо код у SMS. Пароль не потрібен.":"Enter your phone number — we’ll text you a code. No password needed.",
+    "Номер телефону":"Phone number",
+    "Натискаючи «Отримати код», ви приймаєте умови та політику конфіденційності.":"By tapping “Get code”, you accept the terms and privacy policy.",
+    "Отримати код":"Get code",
+    "Введіть код":"Enter the code",
+    "Ми надіслали 4-значний код на":"We sent a 4-digit code to",
+    "Не отримали код?":"Didn’t get the code?",
+    "Надіслати ще раз (0:24)":"Resend (0:24)",
+    "Підтвердити":"Confirm",
+    // —— билеты ——
+    "Квитки":"Tickets",
+    "Оберіть дату відвідування":"Choose your visit date",
+    "ВТ":"TUE","СР":"WED","ЧТ":"THU","ПТ":"FRI","СБ":"SAT","НД":"SUN",
+    "Дітям до 3 років — безкоштовно. Іменинникам до 18 — вхід вільний (з документом).":"Kids under 3 — free. Birthday guests under 18 — free entry (with ID).",
+    "Дорослий":"Adult",
+    "повний день · вище 140 см":"full day · over 140 cm",
+    "Дитячий":"Child",
+    "до 140 см":"under 140 cm",
+    "Разом ·":"Total ·",
+    "квиток":"ticket",
+    "Перейти до оплати":"Go to payment",
+    // —— абонемент ——
+    "Абонементи":"Season passes",
+    "🏖️ Весь сезон":"🏖️ All season",
+    "весь сезон":"all season",
+    "Абонемент «Літо 2026»":"“Summer 2026” pass",
+    "Багаторазове відвідування весь сезон":"Unlimited visits all season",
+    "Діє 01.06.2026 – 31.08.2026 · необмежена кількість відвідувань":"Valid 01.06.2026 – 31.08.2026 · unlimited visits",
+    "Один платіж — і все літо ваше":"One payment — and the whole summer is yours",
+    "Обмін QR на браслет у касі або автоматичній касі":"Exchange the QR for a wristband at the desk or self-service kiosk",
+    "Прив'язка відбитку на турнікеті при першому відвідуванні":"Fingerprint registration at the turnstile on first visit",
+    "Кількість абонементів":"Number of passes",
+    "Літо 2026 (online)":"Summer 2026 (online)",
+    "на одну особу":"per person",
+    "Під кожним QR буде ім'я власника. При обміні на браслети не переплутайте — прив'яжіть СВІЙ відбиток до свого абонемента.":"Each QR shows the owner’s name. When exchanging for wristbands, don’t mix them up — link YOUR fingerprint to your own pass.",
+    "абонемент":"pass",
+    // —— оплата ——
+    "Оплата":"Payment",
+    "Дорослий × 1":"Adult × 1",
+    "Дитячий × 1":"Child × 1",
+    "Сервісний збір":"Service fee",
+    "До сплати":"Total",
+    "Спосіб оплати":"Payment method",
+    "оплата в один дотик":"one-tap payment",
+    "Банківська картка":"Bank card",
+    "Visa / Mastercard · Apple/Google/будь-яка":"Visa / Mastercard · Apple/Google/any",
+    "🔒 Оплата захищена. Кошти проходять через українського провайдера (Fondy / WayForPay / LiqPay).":"🔒 Payment is secure. Funds are processed by a Ukrainian provider (Fondy / WayForPay / LiqPay).",
+    // —— успех + qr ——
+    "Оплата успішна 🎉":"Payment successful 🎉",
+    "Квиток уже у вас. Покажіть QR-код на турнікеті або обміняйте на браслет у касі.":"Your ticket is ready. Show the QR code at the turnstile or exchange it for a wristband at the desk.",
+    "Квиток · Аквапарк Одеса":"Ticket · Aquapark Odesa",
+    "Дорослий + Дитячий":"Adult + Child",
+    "Середа, 10 червня 2026 · повний день":"Wednesday, 10 June 2026 · full day",
+    "При першому відвідуванні зареєструйте відбиток у касі або на вхідному турнікеті.":"On your first visit, register your fingerprint at the desk or the entrance turnstile.",
+    "Мої квитки":"My tickets",
+    "На головну":"Back to home",
+    // —— мой qr ——
+    "Олександр · діє до 31.08.2026":"Oleksandr · valid until 31.08.2026",
+    "Піднесіть екран до сканера турнікета":"Hold the screen up to the turnstile scanner",
+    "або до автоматичної каси для обміну на браслет":"or the self-service desk to get your wristband",
+    // —— мои билеты ——
+    "діє до 31.08.2026 · Олександр":"valid until 31.08.2026 · Oleksandr",
+    "Активний":"Active",
+    "10.06.2026 · повний день":"10.06.2026 · full day",
+    "Дорослий × 2":"Adult × 2",
+    "02.06.2026 · використано":"02.06.2026 · used",
+    "Минув":"Expired",
+    // —— профиль ——
+    "Олександр":"Oleksandr",
+    "Мої оплати":"My payments",
+    "Промокод":"Promo code",
+    "Бонуси «Позитивчики»":"“Pozytyvchyky” bonuses",
+    "Допомога та зв'язок":"Help & contact",
+    // —— карта штампів ——
+    "Моя картка":"My card",
+    "4 з 9 до безкоштовного квитка":"4 of 9 to a free ticket",
+    "Картка відвідувань":"Visit card",
+    "Збери 9 — 10-те безкоштовно":"Collect 9 — 10th is free",
+    "Ще 5 покупок — і 10-те відвідування безкоштовне 🎉":"5 more purchases — and your 10th visit is free 🎉",
+    "Як це працює":"How it works",
+    "1 покупка в застосунку = 1 штамп":"1 in-app purchase = 1 stamp",
+    "квиток, шафка чи їжа":"ticket, locker or food",
+    "Кожне 10-те відвідування — безкоштовне":"Every 10th visit is free",
+    "збери 9 штампів":"collect 9 stamps",
+    "Безкоштовний вхід у день народження":"Free entry on your birthday",
+    "автоматично, раз на рік":"automatically, once a year",
+    "👫 Приведи друга":"👫 Refer a friend",
+    "Друг купує за твоїм кодом — ти отримуєш +1 штамп, а друг −10% на перший квиток.":"Your friend buys with your code — you get +1 stamp and they get −10% off their first ticket.",
+    "Поділитися":"Share",
+    "Історія":"History",
+    "Купівля квитка":"Ticket purchase",
+    "Оплата в застосунку":"In-app purchase",
+    "Бонус за друга":"Friend referral bonus",
+    "+1 штамп":"+1 stamp",
+    // —— карта ——
+    "Адреса":"Address",
+    "смт Авангард, вул. Ангарська, 70 (7 км)":"Avanhard, 70 Anharska St (7 km)",
+    "смт Авангард · 7 км":"Avanhard · 7 km",
+    "Графік роботи":"Working hours",
+    "Щодня 10:00–18:00":"Daily 10:00–18:00",
+    "Телефон":"Phone",
+    "🧭 Прокласти маршрут (Google Maps)":"🧭 Get directions (Google Maps)",
+    "📞 Подзвонити":"📞 Call us",
+    // —— нижнее меню ——
+    "Головна":"Home","Мої":"Mine","Профіль":"Profile"
+  };
+
+  const I18N_NODES=[];
+  function collectNodes(){
+    const root=document.querySelector('.phone');
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
+      if(!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      if(n.parentElement && n.parentElement.closest('[data-noi18n]')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }});
+    let n; while(n=w.nextNode()) I18N_NODES.push([n,n.nodeValue]);
+  }
+  function applyLang(l){
+    I18N_NODES.forEach(([node,orig])=>{
+      if(l!=='en'){ node.nodeValue=orig; return; }
+      const lead=orig.match(/^\s*/)[0], trail=orig.match(/\s*$/)[0];
+      const core=orig.trim().split(String.fromCharCode(160)).join(' ').replace(/\s+/g,' ');
+      node.nodeValue = (DICT[core]!==undefined) ? lead+DICT[core]+trail : orig;
+    });
+  }
+  function toggleLang(){
+    currentLang = currentLang==='uk' ? 'en' : 'uk';
+    applyLang(currentLang);
+    document.documentElement.lang = currentLang;
+    document.getElementById('langLabel').textContent = currentLang==='uk' ? 'EN' : 'UA';
+    updatePayBtn();
+    renderWeather();
+  }
+
+  // ====== ПОГОДА В РЕАЛЬНОМ ВРЕМЕНИ (Open-Meteo, без API-ключа) ======
+  const ODESA = {lat:46.4775, lon:30.7326};
+  let weatherData = null;
+  const WCODE = {
+    0:{e:'☀️',uk:'Ясно',en:'Clear'},
+    1:{e:'🌤️',uk:'Переважно ясно',en:'Mainly clear'},
+    2:{e:'⛅',uk:'Мінлива хмарність',en:'Partly cloudy'},
+    3:{e:'☁️',uk:'Хмарно',en:'Overcast'},
+    45:{e:'🌫️',uk:'Туман',en:'Fog'},48:{e:'🌫️',uk:'Туман',en:'Fog'},
+    51:{e:'🌦️',uk:'Мряка',en:'Drizzle'},53:{e:'🌦️',uk:'Мряка',en:'Drizzle'},55:{e:'🌦️',uk:'Мряка',en:'Drizzle'},
+    61:{e:'🌧️',uk:'Дощ',en:'Rain'},63:{e:'🌧️',uk:'Дощ',en:'Rain'},65:{e:'🌧️',uk:'Сильний дощ',en:'Heavy rain'},
+    71:{e:'🌨️',uk:'Сніг',en:'Snow'},73:{e:'🌨️',uk:'Сніг',en:'Snow'},75:{e:'🌨️',uk:'Сніг',en:'Snow'},
+    80:{e:'🌦️',uk:'Короткі зливи',en:'Showers'},81:{e:'🌦️',uk:'Зливи',en:'Showers'},82:{e:'⛈️',uk:'Сильні зливи',en:'Heavy showers'},
+    95:{e:'⛈️',uk:'Гроза',en:'Thunderstorm'},96:{e:'⛈️',uk:'Гроза з градом',en:'Thunderstorm'},99:{e:'⛈️',uk:'Гроза з градом',en:'Thunderstorm'}
+  };
+  function renderWeather(){
+    if(!weatherData) return;
+    const w = WCODE[weatherData.code] || {e:'⛅',uk:'Хмарно',en:'Cloudy'};
+    const t=document.getElementById('wTemp'), d=document.getElementById('wDesc'), m=document.getElementById('wMeta'), ic=document.getElementById('wIcon');
+    if(!t) return;
+    t.textContent = Math.round(weatherData.temp)+'°';
+    d.textContent = currentLang==='en' ? w.en : w.uk;
+    m.textContent = currentLang==='en'
+      ? 'Odesa · wind '+weatherData.wind.toFixed(1)+' m/s'
+      : 'Одеса · вітер '+weatherData.wind.toFixed(1)+' м/с';
+    ic.textContent = w.e;
+  }
+  function fetchWeather(){
+    const url='https://api.open-meteo.com/v1/forecast?latitude='+ODESA.lat+'&longitude='+ODESA.lon
+      +'&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=auto';
+    fetch(url).then(r=>r.json()).then(j=>{
+      const c=j.current;
+      weatherData={temp:c.temperature_2m, wind:c.wind_speed_10m, code:c.weather_code};
+      renderWeather();
+    }).catch(()=>{
+      const d=document.getElementById('wDesc'), m=document.getElementById('wMeta');
+      if(d&&!weatherData){ d.textContent=currentLang==='en'?'Weather unavailable':'Погода недоступна'; m.textContent='Одеса'; }
+    });
+  }
+
+  // ---- генерация «QR» (декоративный, детерминированный) ----
+  function makeQR(){
+    const N=25, cell=7.2, pad=4;
+    let rects='';
+    // псевдо-случайный, но стабильный паттерн
+    let seed=7;
+    const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+      if(rnd()>0.52) rects+=`<rect x="${pad+x*cell}" y="${pad+y*cell}" width="${cell}" height="${cell}" rx="1.4"/>`;
+    }
+    // три «глаза»
+    const eye=(ox,oy)=>`
+      <rect x="${pad+ox*cell}" y="${pad+oy*cell}" width="${cell*7}" height="${cell*7}" rx="6" fill="none" stroke="#0f2138" stroke-width="${cell}"/>
+      <rect x="${pad+(ox+2)*cell}" y="${pad+(oy+2)*cell}" width="${cell*3}" height="${cell*3}" rx="3"/>`;
+    // вырежем зоны глаз из общего паттерна, просто наложим белые квадраты сверху
+    const mask=(ox,oy)=>`<rect x="${pad+ox*cell-2}" y="${pad+oy*cell-2}" width="${cell*7+4}" height="${cell*7+4}" fill="#fff"/>`;
+    const size=pad*2+N*cell;
+    return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${size}" height="${size}" fill="#fff"/>
+      <g fill="#0f2138">${rects}</g>
+      ${mask(0,0)}${mask(N-7,0)}${mask(0,N-7)}
+      <g fill="#0f2138">${eye(0,0)}${eye(N-7,0)}${eye(0,N-7)}</g>
+    </svg>`;
+  }
+  function renderQR(){
+    const html=makeQR();
+    ['qrSuccess','qrMy'].forEach(id=>{const e=document.getElementById(id);if(e&&!e.innerHTML)e.innerHTML=html;});
+  }
+
+  // ---- нижнее меню (вставляем во все экраны с табами) ----
+  const tabsHTML = (active)=>`
+    <button class="tab ${active==='home'?'active':''}" onclick="go('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Головна</button>
+    <button class="tab ${active==='tickets'?'active':''}" onclick="go('tickets')">
+      <svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 010 4 2 2 0 01-2 2H5a2 2 0 01-2-2 2 2 0 000-4 2 2 0 010-4z"/></svg>Квитки</button>
+    <button class="tab qr-tab" onclick="go('myqr')">
+      <span class="qbtn"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h3v3h-3zM20 14v6M17 20h3"/></svg></span></button>
+    <button class="tab ${active==='mytickets'?'active':''}" onclick="go('mytickets')">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM4 10h16"/></svg>Мої</button>
+    <button class="tab ${active==='profile'?'active':''}" onclick="go('profile')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>Профіль</button>`;
+  document.getElementById('tabbar-home').innerHTML = tabsHTML('home');
+  document.getElementById('tabbar-tickets').innerHTML = tabsHTML('mytickets');
+  document.getElementById('tabbar-profile').innerHTML = tabsHTML('profile');
+
+  // init
+  recalc(); renderQR(); collectNodes(); updatePayBtn();
+  fetchWeather(); setInterval(fetchWeather, 600000); // обновление погоды каждые 10 мин
+</script>
+</body>
+</html>
